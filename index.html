@@ -88,7 +88,7 @@
         let engineSoundNode = null;
         let engineGainNode = null;
 
-        // تشغيل صوت محرك السيارة المستمر أثناء اللعب
+        // تشغيل صوت محرك السيارة بصوت واضح وقوي ومستمر
         function startEngineSound() {
             if (engineSoundNode) return;
             if (audioCtx.state === 'suspended') {
@@ -97,10 +97,10 @@
             engineSoundNode = audioCtx.createOscillator();
             engineGainNode = audioCtx.createGain();
             
-            engineSoundNode.type = 'triangle';
-            engineSoundNode.frequency.setValueAtTime(65, audioCtx.currentTime); // صوت محرك هادئ ومنتظم
+            engineSoundNode.type = 'sawtooth'; // صوت خشن يحاكي المحرك الحقيقي
+            engineSoundNode.frequency.setValueAtTime(80, audioCtx.currentTime); 
             
-            engineGainNode.gain.setValueAtTime(0.04, audioCtx.currentTime); // صوت منخفض وغير مزعج
+            engineGainNode.gain.setValueAtTime(0.12, audioCtx.currentTime); // رفع مستوى الصوت ليكون واضحاً تماماً
             
             engineSoundNode.connect(engineGainNode);
             engineGainNode.connect(audioCtx.destination);
@@ -128,7 +128,7 @@
                 osc.type = 'sine';
                 osc.frequency.setValueAtTime(400, audioCtx.currentTime);
                 osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.1);
-                gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
                 gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
                 osc.start();
                 osc.stop(audioCtx.currentTime + 0.1);
@@ -136,7 +136,7 @@
                 osc.type = 'sawtooth';
                 osc.frequency.setValueAtTime(150, audioCtx.currentTime);
                 osc.frequency.linearRampToValueAtTime(40, audioCtx.currentTime + 0.3);
-                gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gainNode.gain.setValueAtTime(0.4, audioCtx.currentTime);
                 gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
                 osc.start();
                 osc.stop(audioCtx.currentTime + 0.3);
@@ -175,7 +175,7 @@
             const pressOn = (e) => {
                 e.preventDefault();
                 keys[keyName] = true;
-                startEngineSound(); // تفعيل الصوت عند أول ضغطة
+                if (audioCtx.state === 'suspended') { audioCtx.resume(); }
             };
             const pressOff = (e) => {
                 e.preventDefault();
@@ -192,7 +192,6 @@
         handleTouch("rightBtn", "ArrowRight");
 
         function spawnEnemy() {
-            // تقليل احتمالية ظهور العربيات المنافسة لتصبح المسافات بينها أوسع وأهدأ
             if (Math.random() < 0.012) {
                 let lanes = [50, 140, 230, 310];
                 let randomLane = lanes[Math.floor(Math.random() * lanes.length)];
@@ -331,9 +330,14 @@
             }
         }
 
-        canvas.addEventListener("click", () => {
+        // تفعيل الصوت عند أول تفاعل للمستخدم مع الشاشة أو الأزرار
+        window.addEventListener("click", () => {
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            startEngineSound();
             if (gameOver) resetGame();
-        });
+        }, { once: false });
 
         startEngineSound();
         loop();
