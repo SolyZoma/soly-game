@@ -109,8 +109,6 @@
 
         let audioCtx = null;
         let soundEnabled = false;
-        let engineSource = null;
-        let engineGain = null;
 
         function initAudio() {
             if (!audioCtx) {
@@ -121,120 +119,38 @@
             }
         }
 
-        // إنشاء ضوضاء منخفضة التردد لمحاكاة صوت المحرك العميق بدون أي زنة
-        function startPlayerEngine() {
-            if (!soundEnabled) return;
-            initAudio();
-            if (engineSource) return;
-
-            try {
-                const bufferSize = audioCtx.sampleRate * 2;
-                const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-                const output = noiseBuffer.getChannelData(0);
-                for (let i = 0; i < bufferSize; i++) {
-                    output[i] = Math.random() * 2 - 1;
-                }
-
-                engineSource = audioCtx.createBufferSource();
-                engineSource.buffer = noiseBuffer;
-                engineSource.loop = true;
-
-                // فلتر لتصفية الترددات الحادة وجعل الصوت هادئاً وخشناً مثل المحركات
-                const filter = audioCtx.createBiquadFilter();
-                filter.type = 'lowpass';
-                filter.frequency.setValueAtTime(120, audioCtx.currentTime);
-
-                engineGain = audioCtx.createGain();
-                engineGain.gain.setValueAtTime(0.25, audioCtx.currentTime);
-
-                engineSource.connect(filter);
-                filter.connect(engineGain);
-                engineGain.connect(audioCtx.destination);
-
-                engineSource.start();
-            } catch (e) {}
-        }
-
-        function stopPlayerEngine() {
-            if (engineSource) {
-                try {
-                    engineSource.stop();
-                    engineSource.disconnect();
-                } catch (e) {}
-                engineSource = null;
-            }
-        }
-
-        // صوت مرور السيارات القادمة (هدير واقعي عند الاقتراب)
-        function playTrafficPassSound() {
+        // نظام أصوات كلاسيكي نظيف مثل ألعاب زمان (ماريو/آركيد)
+        function playChiptuneSound(type) {
             if (!soundEnabled) return;
             initAudio();
 
-            try {
-                const bufferSize = audioCtx.sampleRate;
-                const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-                const output = noiseBuffer.getChannelData(0);
-                for (let i = 0; i < bufferSize; i++) {
-                    output[i] = Math.random() * 2 - 1;
-                }
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
 
-                const noise = audioCtx.createBufferSource();
-                noise.buffer = noiseBuffer;
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
 
-                const filter = audioCtx.createBiquadFilter();
-                filter.type = 'bandpass';
-                filter.frequency.setValueAtTime(250, audioCtx.currentTime);
-                filter.Q.setValueAtTime(3, audioCtx.currentTime);
-
-                const gain = audioCtx.createGain();
-                gain.gain.setValueAtTime(0.001, audioCtx.currentTime);
-                gain.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.15);
-                gain.gain.linearRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
-
-                noise.connect(filter);
-                filter.connect(gain);
-                gain.connect(audioCtx.destination);
-
-                noise.start();
-                noise.stop(audioCtx.currentTime + 0.4);
-            } catch (e) {}
-        }
-
-        function playSound(type) {
-            if (!soundEnabled) return;
-            initAudio();
-            
-            if (type === 'score') {
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(400, audioCtx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.1);
-                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.1);
-            } else if (type === 'crash') {
-                // صوت اصطدام واقعي وعميق
-                const bufferSize = audioCtx.sampleRate * 0.5;
-                const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-                const data = buffer.getChannelData(0);
-                for (let i = 0; i < bufferSize; i++) {
-                    data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (audioCtx.sampleRate * 0.15));
-                }
-                const noise = audioCtx.createBufferSource();
-                noise.buffer = buffer;
-                const filter = audioCtx.createBiquadFilter();
-                filter.type = 'lowpass';
-                filter.frequency.setValueAtTime(300, audioCtx.currentTime);
-                const gain = audioCtx.createGain();
-                gain.gain.setValueAtTime(0.6, audioCtx.currentTime);
-                noise.connect(filter);
-                filter.connect(gain);
-                gain.connect(audioCtx.destination);
-                noise.start();
+            if (type === 'coin') {
+                // صوت تجميع نقاط مبهج ونظيف
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(987.77, now); // نغمة B5
+                osc.frequency.setValueAtTime(1318.51, now + 0.08); // نغمة E6
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+                osc.start(now);
+                osc.stop(now + 0.25);
+            } else if (type === 'gameover') {
+                // نغمة خسارة كلاسيكية متسلسلة وهادئة
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(400, now);
+                osc.frequency.setValueAtTime(350, now + 0.15);
+                osc.frequency.setValueAtTime(300, now + 0.3);
+                osc.frequency.setValueAtTime(200, now + 0.45);
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
+                osc.start(now);
+                osc.stop(now + 0.7);
             }
         }
 
@@ -244,11 +160,10 @@
             if (soundEnabled) {
                 soundBtn.textContent = "🔊 الصوت مفعل";
                 soundBtn.style.backgroundColor = "#27ae60";
-                startPlayerEngine();
+                playChiptuneSound('coin');
             } else {
                 soundBtn.textContent = "🔇 كتم الصوت";
                 soundBtn.style.backgroundColor = "#e74c3c";
-                stopPlayerEngine();
             }
         });
 
@@ -289,7 +204,6 @@
                     soundBtn.textContent = "🔊 الصوت مفعل";
                     soundBtn.style.backgroundColor = "#27ae60";
                 }
-                startPlayerEngine();
             };
             const pressOff = (e) => {
                 e.preventDefault();
@@ -315,8 +229,7 @@
                     width: 42,
                     height: 75,
                     speed: 2 + Math.random() * 1.5, 
-                    color: "#ff3300",
-                    soundPlayed: false
+                    color: "#ff3300" 
                 });
             }
         }
@@ -327,7 +240,6 @@
             player.x = 180;
             player.y = 480;
             gameOver = false;
-            startPlayerEngine();
             loop();
         }
 
@@ -353,21 +265,15 @@
             for (let i = enemies.length - 1; i >= 0; i--) {
                 enemies[i].y += enemies[i].speed;
 
-                if (!enemies[i].soundPlayed && enemies[i].y > 200 && enemies[i].y < 400) {
-                    playTrafficPassSound();
-                    enemies[i].soundPlayed = true;
-                }
-
                 if (checkCollision(player, enemies[i])) {
                     gameOver = true;
-                    stopPlayerEngine();
-                    playSound('crash'); 
+                    playChiptuneSound('gameover'); 
                 }
 
                 if (enemies[i].y > canvas.height) {
                     enemies.splice(i, 1);
                     score += 10;
-                    playSound('score'); 
+                    playChiptuneSound('coin'); 
                 }
             }
         }
