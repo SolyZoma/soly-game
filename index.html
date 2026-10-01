@@ -38,23 +38,24 @@
             height: auto;
             max-height: 70vh;
         }
-        /* تصميم أزرار التحكم باللمس أسفل الشاشة */
+        /* تصميم أزرار اليمين واليسار فقط بشكل مريح أسفل الشاشة */
         .controls {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 6px;
+            display: flex;
+            justify-content: space-between;
             width: 100%;
             max-width: 380px;
-            margin-top: 10px;
+            margin-top: 15px;
             padding: 0 5px;
+            gap: 15px;
         }
         .btn {
+            flex: 1;
             background-color: #2c3e50;
             color: white;
             border: 2px solid #34495e;
-            font-size: 20px;
-            padding: 12px 0;
-            border-radius: 10px;
+            font-size: 32px;
+            padding: 18px 0;
+            border-radius: 12px;
             cursor: pointer;
             outline: none;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
@@ -62,7 +63,7 @@
         }
         .btn:active {
             background-color: #e74c3c;
-            transform: scale(0.95);
+            transform: scale(0.96);
         }
     </style>
 </head>
@@ -72,24 +73,53 @@
         <canvas id="gameCanvas" width="400" height="600"></canvas>
     </div>
 
-    <!-- لوحة الأزرار السفلية -->
+    <!-- أزرار التحكم لليمين واليسار فقط -->
     <div class="controls">
         <button class="btn" id="leftBtn">◀</button>
         <button class="btn" id="rightBtn">▶</button>
-        <button class="btn" id="upBtn">▲</button>
-        <button class="btn" id="downBtn">▼</button>
     </div>
 
     <script>
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
 
+        // نظام المؤثرات الصوتية البصرية (Web Audio API) لتجنب ملفات خارجية
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playSound(type) {
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            if (type === 'score') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.1);
+                gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.1);
+            } else if (type === 'crash') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+                osc.frequency.linearRampToValueAtTime(40, audioCtx.currentTime + 0.3);
+                gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.3);
+            }
+        }
+
         let player = {
             x: 180,
             y: 480,
             width: 42,
             height: 75,
-            speed: 5,
+            speed: 4, // سرعة أبطأ وأكثر تحكماً
             color: "#00e5ff"
         };
 
@@ -98,7 +128,6 @@
         let gameOver = false;
         let keys = {};
 
-        // التحكم بلوحة المفاتيح
         window.addEventListener("keydown", (e) => {
             keys[e.key] = true;
             if (gameOver && e.key === "Enter") {
@@ -110,7 +139,6 @@
             keys[e.key] = false;
         });
 
-        // ربط أزرار اللمس للموبايل
         function handleTouch(id, keyName) {
             const btn = document.getElementById(id);
             if(!btn) return;
@@ -132,11 +160,9 @@
 
         handleTouch("leftBtn", "ArrowLeft");
         handleTouch("rightBtn", "ArrowRight");
-        handleTouch("upBtn", "ArrowUp");
-        handleTouch("downBtn", "ArrowDown");
 
         function spawnEnemy() {
-            if (Math.random() < 0.02) {
+            if (Math.random() < 0.018) {
                 let lanes = [50, 140, 230, 310];
                 let randomLane = lanes[Math.floor(Math.random() * lanes.length)];
                 enemies.push({
@@ -144,7 +170,7 @@
                     y: -90,
                     width: 42,
                     height: 75,
-                    speed: 3 + Math.random() * 3,
+                    speed: 2.2 + Math.random() * 2, // سرعة سيارات أبطأ وأكثر أماناً
                     color: "#ff3300" 
                 });
             }
@@ -169,17 +195,12 @@
         function update() {
             if (gameOver) return;
 
+            // التحكم في الحركة يميناً ويساراً فقط
             if ((keys["ArrowLeft"] || keys["a"]) && player.x > 20) {
                 player.x -= player.speed;
             }
             if ((keys["ArrowRight"] || keys["d"]) && player.x < canvas.width - player.width - 20) {
                 player.x += player.speed;
-            }
-            if ((keys["ArrowUp"] || keys["w"]) && player.y > 20) {
-                player.y -= player.speed;
-            }
-            if ((keys["ArrowDown"] || keys["s"]) && player.y < canvas.height - player.height - 20) {
-                player.y += player.speed;
             }
 
             spawnEnemy();
@@ -189,11 +210,13 @@
 
                 if (checkCollision(player, enemies[i])) {
                     gameOver = true;
+                    playSound('crash'); // تشغيل صوت الاصطدام
                 }
 
                 if (enemies[i].y > canvas.height) {
                     enemies.splice(i, 1);
                     score += 10;
+                    playSound('score'); // تشغيل صوت كسب النقاط
                 }
             }
         }
