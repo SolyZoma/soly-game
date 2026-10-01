@@ -38,7 +38,7 @@
             height: auto;
             max-height: 70vh;
         }
-        /* تصميم أزرار اليمين واليسار فقط بشكل مريح أسفل الشاشة */
+        /* تصميم أزرار اليمين واليسار المريحة */
         .controls {
             display: flex;
             justify-content: space-between;
@@ -83,8 +83,37 @@
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
 
-        // نظام المؤثرات الصوتية البصرية (Web Audio API) لتجنب ملفات خارجية
+        // نظام المؤثرات الصوتية المتطورة (Web Audio API)
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        let engineSoundNode = null;
+        let engineGainNode = null;
+
+        // تشغيل صوت محرك السيارة المستمر أثناء اللعب
+        function startEngineSound() {
+            if (engineSoundNode) return;
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            engineSoundNode = audioCtx.createOscillator();
+            engineGainNode = audioCtx.createGain();
+            
+            engineSoundNode.type = 'triangle';
+            engineSoundNode.frequency.setValueAtTime(65, audioCtx.currentTime); // صوت محرك هادئ ومنتظم
+            
+            engineGainNode.gain.setValueAtTime(0.04, audioCtx.currentTime); // صوت منخفض وغير مزعج
+            
+            engineSoundNode.connect(engineGainNode);
+            engineGainNode.connect(audioCtx.destination);
+            engineSoundNode.start();
+        }
+
+        function stopEngineSound() {
+            if (engineSoundNode) {
+                engineSoundNode.stop();
+                engineSoundNode.disconnect();
+                engineSoundNode = null;
+            }
+        }
 
         function playSound(type) {
             if (audioCtx.state === 'suspended') {
@@ -119,7 +148,7 @@
             y: 480,
             width: 42,
             height: 75,
-            speed: 4, // سرعة أبطأ وأكثر تحكماً
+            speed: 4,
             color: "#00e5ff"
         };
 
@@ -146,6 +175,7 @@
             const pressOn = (e) => {
                 e.preventDefault();
                 keys[keyName] = true;
+                startEngineSound(); // تفعيل الصوت عند أول ضغطة
             };
             const pressOff = (e) => {
                 e.preventDefault();
@@ -162,7 +192,8 @@
         handleTouch("rightBtn", "ArrowRight");
 
         function spawnEnemy() {
-            if (Math.random() < 0.018) {
+            // تقليل احتمالية ظهور العربيات المنافسة لتصبح المسافات بينها أوسع وأهدأ
+            if (Math.random() < 0.012) {
                 let lanes = [50, 140, 230, 310];
                 let randomLane = lanes[Math.floor(Math.random() * lanes.length)];
                 enemies.push({
@@ -170,7 +201,7 @@
                     y: -90,
                     width: 42,
                     height: 75,
-                    speed: 2.2 + Math.random() * 2, // سرعة سيارات أبطأ وأكثر أماناً
+                    speed: 2 + Math.random() * 1.5, 
                     color: "#ff3300" 
                 });
             }
@@ -182,6 +213,7 @@
             player.x = 180;
             player.y = 480;
             gameOver = false;
+            startEngineSound();
             loop();
         }
 
@@ -195,7 +227,6 @@
         function update() {
             if (gameOver) return;
 
-            // التحكم في الحركة يميناً ويساراً فقط
             if ((keys["ArrowLeft"] || keys["a"]) && player.x > 20) {
                 player.x -= player.speed;
             }
@@ -210,13 +241,14 @@
 
                 if (checkCollision(player, enemies[i])) {
                     gameOver = true;
-                    playSound('crash'); // تشغيل صوت الاصطدام
+                    stopEngineSound();
+                    playSound('crash'); 
                 }
 
                 if (enemies[i].y > canvas.height) {
                     enemies.splice(i, 1);
                     score += 10;
-                    playSound('score'); // تشغيل صوت كسب النقاط
+                    playSound('score'); 
                 }
             }
         }
@@ -303,6 +335,7 @@
             if (gameOver) resetGame();
         });
 
+        startEngineSound();
         loop();
     </script>
 </body>
