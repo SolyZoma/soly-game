@@ -107,11 +107,10 @@
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
 
-        // نظام المؤثرات الصوتية المتطورة (Web Audio API)
         let audioCtx = null;
-        let playerEngineNode = null;
-        let playerGainNode = null;
         let soundEnabled = false;
+        let engineSource = null;
+        let engineGain = null;
 
         function initAudio() {
             if (!audioCtx) {
@@ -122,88 +121,120 @@
             }
         }
 
-        // صوت محرك سيارة اللاعب الخاصة
+        // إنشاء ضوضاء منخفضة التردد لمحاكاة صوت المحرك العميق بدون أي زنة
         function startPlayerEngine() {
             if (!soundEnabled) return;
             initAudio();
-            if (playerEngineNode) return;
+            if (engineSource) return;
 
             try {
-                playerEngineNode = audioCtx.createOscillator();
-                playerGainNode = audioCtx.createGain();
-                
-                playerEngineNode.type = 'sawtooth'; 
-                playerEngineNode.frequency.setValueAtTime(85, audioCtx.currentTime); 
-                
-                playerGainNode.gain.setValueAtTime(0.12, audioCtx.currentTime); 
-                
-                playerEngineNode.connect(playerGainNode);
-                playerGainNode.connect(audioCtx.destination);
-                playerEngineNode.start();
-            } catch(e) {}
+                const bufferSize = audioCtx.sampleRate * 2;
+                const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const output = noiseBuffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    output[i] = Math.random() * 2 - 1;
+                }
+
+                engineSource = audioCtx.createBufferSource();
+                engineSource.buffer = noiseBuffer;
+                engineSource.loop = true;
+
+                // فلتر لتصفية الترددات الحادة وجعل الصوت هادئاً وخشناً مثل المحركات
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(120, audioCtx.currentTime);
+
+                engineGain = audioCtx.createGain();
+                engineGain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+
+                engineSource.connect(filter);
+                filter.connect(engineGain);
+                engineGain.connect(audioCtx.destination);
+
+                engineSource.start();
+            } catch (e) {}
         }
 
         function stopPlayerEngine() {
-            if (playerEngineNode) {
+            if (engineSource) {
                 try {
-                    playerEngineNode.stop();
-                    playerEngineNode.disconnect();
-                } catch(e) {}
-                playerEngineNode = null;
+                    engineSource.stop();
+                    engineSource.disconnect();
+                } catch (e) {}
+                engineSource = null;
             }
         }
 
-        // توليد صوت مرور محرك لكل سيارة قادمة تعدي في الشارع
+        // صوت مرور السيارات القادمة (هدير واقعي عند الاقتراب)
         function playTrafficPassSound() {
             if (!soundEnabled) return;
             initAudio();
 
             try {
-                const osc = audioCtx.createOscillator();
+                const bufferSize = audioCtx.sampleRate;
+                const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const output = noiseBuffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    output[i] = Math.random() * 2 - 1;
+                }
+
+                const noise = audioCtx.createBufferSource();
+                noise.buffer = noiseBuffer;
+
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'bandpass';
+                filter.frequency.setValueAtTime(250, audioCtx.currentTime);
+                filter.Q.setValueAtTime(3, audioCtx.currentTime);
+
                 const gain = audioCtx.createGain();
-                
-                osc.type = 'triangle';
-                // محاكاة تأثير دوبلر لصوت محرك سيارة قادمة ومسرعة
-                osc.frequency.setValueAtTime(120, audioCtx.currentTime);
-                osc.frequency.linearRampToValueAtTime(70, audioCtx.currentTime + 0.35);
-
                 gain.gain.setValueAtTime(0.001, audioCtx.currentTime);
-                gain.gain.linearRampToValueAtTime(0.08, audioCtx.currentTime + 0.1);
-                gain.gain.linearRampToValueAtTime(0.001, audioCtx.currentTime + 0.35);
+                gain.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.15);
+                gain.gain.linearRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
 
-                osc.connect(gain);
+                noise.connect(filter);
+                filter.connect(gain);
                 gain.connect(audioCtx.destination);
 
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.35);
-            } catch(e) {}
+                noise.start();
+                noise.stop(audioCtx.currentTime + 0.4);
+            } catch (e) {}
         }
 
         function playSound(type) {
             if (!soundEnabled) return;
             initAudio();
             
-            const osc = audioCtx.createOscillator();
-            const gainNode = audioCtx.createGain();
-            osc.connect(gainNode);
-            gainNode.connect(audioCtx.destination);
-
             if (type === 'score') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
                 osc.type = 'sine';
                 osc.frequency.setValueAtTime(400, audioCtx.currentTime);
                 osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.1);
-                gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
                 osc.start();
                 osc.stop(audioCtx.currentTime + 0.1);
             } else if (type === 'crash') {
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(180, audioCtx.currentTime);
-                osc.frequency.linearRampToValueAtTime(40, audioCtx.currentTime + 0.4);
-                gainNode.gain.setValueAtTime(0.4, audioCtx.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.4);
+                // صوت اصطدام واقعي وعميق
+                const bufferSize = audioCtx.sampleRate * 0.5;
+                const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (audioCtx.sampleRate * 0.15));
+                }
+                const noise = audioCtx.createBufferSource();
+                noise.buffer = buffer;
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(300, audioCtx.currentTime);
+                const gain = audioCtx.createGain();
+                gain.gain.setValueAtTime(0.6, audioCtx.currentTime);
+                noise.connect(filter);
+                filter.connect(gain);
+                gain.connect(audioCtx.destination);
+                noise.start();
             }
         }
 
@@ -285,7 +316,7 @@
                     height: 75,
                     speed: 2 + Math.random() * 1.5, 
                     color: "#ff3300",
-                    soundPlayed: false // للتحقق من تشغيل صوت مرور هذه السيارة مرة واحدة
+                    soundPlayed: false
                 });
             }
         }
@@ -322,7 +353,6 @@
             for (let i = enemies.length - 1; i >= 0; i--) {
                 enemies[i].y += enemies[i].speed;
 
-                // إطلاق صوت محرك للسيارة القادمة عندما تقترب من منتصف الشاشة وتمر بجوار اللاعب
                 if (!enemies[i].soundPlayed && enemies[i].y > 200 && enemies[i].y < 400) {
                     playTrafficPassSound();
                     enemies[i].soundPlayed = true;
