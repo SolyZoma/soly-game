@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>لعبة سباق السيارات - ICE vs FIRE</title>
+    <title>لعبة Ice Man - سباق وقفز</title>
     <style>
         * {
             box-sizing: border-box;
@@ -45,9 +45,9 @@
         }
         #game-container {
             position: relative;
-            border: 3px solid #34495e;
+            border: 3px solid #00e5ff;
             border-radius: 8px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.8);
+            box-shadow: 0 5px 15px rgba(0,229,255,0.3);
             background-color: #1a1a1a;
         }
         canvas {
@@ -55,25 +55,24 @@
             width: 100vw;
             max-width: 380px;
             height: auto;
-            max-height: 70vh;
+            max-height: 65vh;
         }
-        /* تصميم أزرار اليمين واليسار المريحة */
         .controls {
             display: flex;
             justify-content: space-between;
             width: 100%;
             max-width: 380px;
-            margin-top: 15px;
+            margin-top: 12px;
             padding: 0 5px;
-            gap: 15px;
+            gap: 10px;
         }
         .btn {
             flex: 1;
             background-color: #2c3e50;
             color: white;
             border: 2px solid #34495e;
-            font-size: 32px;
-            padding: 18px 0;
+            font-size: 26px;
+            padding: 14px 0;
             border-radius: 12px;
             cursor: pointer;
             outline: none;
@@ -81,25 +80,30 @@
             touch-action: manipulation;
         }
         .btn:active {
-            background-color: #e74c3c;
+            background-color: #00e5ff;
+            color: #000;
             transform: scale(0.96);
+        }
+        #jumpBtn {
+            background-color: #2980b9;
+            border-color: #3498db;
         }
     </style>
 </head>
 <body>
 
     <div id="game-header">
-        <span style="font-size: 14px; color: #aaa;">ICE vs FIRE</span>
+        <span style="font-size: 14px; color: #00e5ff; font-weight: bold;">ICE MAN ADVENTURE</span>
         <button id="sound-btn">🔊 تشغيل الصوت</button>
     </div>
 
     <div id="game-container">
-        <canvas id="gameCanvas" width="400" height="600"></canvas>
+        <canvas id="gameCanvas" width="400" height="550"></canvas>
     </div>
 
-    <!-- أزرار التحكم لليمين واليسار فقط -->
     <div class="controls">
         <button class="btn" id="leftBtn">◀</button>
+        <button class="btn" id="jumpBtn">▲ قفز</button>
         <button class="btn" id="rightBtn">▶</button>
     </div>
 
@@ -119,7 +123,6 @@
             }
         }
 
-        // نظام أصوات كلاسيكي نظيف مثل ألعاب زمان (ماريو/آركيد)
         function playChiptuneSound(type) {
             if (!soundEnabled) return;
             initAudio();
@@ -132,16 +135,22 @@
             gain.connect(audioCtx.destination);
 
             if (type === 'coin') {
-                // صوت تجميع نقاط مبهج ونظيف
                 osc.type = 'square';
-                osc.frequency.setValueAtTime(987.77, now); // نغمة B5
-                osc.frequency.setValueAtTime(1318.51, now + 0.08); // نغمة E6
+                osc.frequency.setValueAtTime(987.77, now);
+                osc.frequency.setValueAtTime(1318.51, now + 0.08);
                 gain.gain.setValueAtTime(0.1, now);
                 gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
                 osc.start(now);
                 osc.stop(now + 0.25);
+            } else if (type === 'jump') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(300, now);
+                osc.frequency.exponentialRampToValueAtTime(600, now + 0.15);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+                osc.start(now);
+                osc.stop(now + 0.15);
             } else if (type === 'gameover') {
-                // نغمة خسارة كلاسيكية متسلسلة وهادئة
                 osc.type = 'square';
                 osc.frequency.setValueAtTime(400, now);
                 osc.frequency.setValueAtTime(350, now + 0.15);
@@ -169,20 +178,29 @@
 
         let player = {
             x: 180,
-            y: 480,
-            width: 42,
-            height: 75,
-            speed: 4,
+            y: 430,
+            width: 38,
+            height: 55,
+            speed: 5,
+            velocityY: 0,
+            jumpPower: -11,
+            gravity: 0.55,
+            grounded: true,
             color: "#00e5ff"
         };
 
-        let enemies = [];
+        let obstacles = [];
         let score = 0;
         let gameOver = false;
         let keys = {};
 
         window.addEventListener("keydown", (e) => {
             keys[e.key] = true;
+            if ((e.key === " " || e.key === "ArrowUp" || e.key === "w") && player.grounded && !gameOver) {
+                player.velocityY = player.jumpPower;
+                player.grounded = false;
+                playChiptuneSound('jump');
+            }
             if (gameOver && e.key === "Enter") {
                 resetGame();
             }
@@ -192,13 +210,21 @@
             keys[e.key] = false;
         });
 
-        function handleTouch(id, keyName) {
+        function handleTouch(id, keyName, isJump = false) {
             const btn = document.getElementById(id);
             if(!btn) return;
             
             const pressOn = (e) => {
                 e.preventDefault();
-                keys[keyName] = true;
+                if (isJump) {
+                    if (player.grounded && !gameOver) {
+                        player.velocityY = player.jumpPower;
+                        player.grounded = false;
+                        playChiptuneSound('jump');
+                    }
+                } else {
+                    keys[keyName] = true;
+                }
                 if (!soundEnabled) {
                     soundEnabled = true;
                     soundBtn.textContent = "🔊 الصوت مفعل";
@@ -207,7 +233,9 @@
             };
             const pressOff = (e) => {
                 e.preventDefault();
-                keys[keyName] = false;
+                if (!isJump) {
+                    keys[keyName] = false;
+                }
             };
 
             btn.addEventListener("touchstart", pressOn, { passive: false });
@@ -218,27 +246,29 @@
 
         handleTouch("leftBtn", "ArrowLeft");
         handleTouch("rightBtn", "ArrowRight");
+        handleTouch("jumpBtn", "Space", true);
 
-        function spawnEnemy() {
-            if (Math.random() < 0.012) {
-                let lanes = [50, 140, 230, 310];
-                let randomLane = lanes[Math.floor(Math.random() * lanes.length)];
-                enemies.push({
-                    x: randomLane,
-                    y: -90,
-                    width: 42,
-                    height: 75,
-                    speed: 2 + Math.random() * 1.5, 
-                    color: "#ff3300" 
+        function spawnObstacle() {
+            if (Math.random() < 0.02) {
+                let isFire = Math.random() < 0.6;
+                obstacles.push({
+                    x: Math.random() * (canvas.width - 50),
+                    y: -50,
+                    width: 35,
+                    height: 35,
+                    speed: 2.5 + Math.random() * 2,
+                    type: isFire ? 'fire' : 'spike'
                 });
             }
         }
 
         function resetGame() {
-            enemies = [];
+            obstacles = [];
             score = 0;
             player.x = 180;
-            player.y = 480;
+            player.y = 430;
+            player.velocityY = 0;
+            player.grounded = true;
             gameOver = false;
             loop();
         }
@@ -253,83 +283,89 @@
         function update() {
             if (gameOver) return;
 
-            if ((keys["ArrowLeft"] || keys["a"]) && player.x > 20) {
+            if ((keys["ArrowLeft"] || keys["a"]) && player.x > 10) {
                 player.x -= player.speed;
             }
-            if ((keys["ArrowRight"] || keys["d"]) && player.x < canvas.width - player.width - 20) {
+            if ((keys["ArrowRight"] || keys["d"]) && player.x < canvas.width - player.width - 10) {
                 player.x += player.speed;
             }
 
-            spawnEnemy();
+            player.velocityY += player.gravity;
+            player.y += player.velocityY;
 
-            for (let i = enemies.length - 1; i >= 0; i--) {
-                enemies[i].y += enemies[i].speed;
+            let floorY = 430;
+            if (player.y >= floorY) {
+                player.y = floorY;
+                player.velocityY = 0;
+                player.grounded = true;
+            }
 
-                if (checkCollision(player, enemies[i])) {
+            spawnObstacle();
+
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                obstacles[i].y += obstacles[i].speed;
+
+                if (checkCollision(player, obstacles[i])) {
                     gameOver = true;
-                    playChiptuneSound('gameover'); 
+                    playChiptuneSound('gameover');
                 }
 
-                if (enemies[i].y > canvas.height) {
-                    enemies.splice(i, 1);
+                if (obstacles[i].y > canvas.height) {
+                    obstacles.splice(i, 1);
                     score += 10;
-                    playChiptuneSound('coin'); 
+                    playChiptuneSound('coin');
                 }
             }
         }
 
-        function drawCar(x, y, width, height, mainColor, isPlayer) {
-            ctx.fillStyle = "#111";
-            ctx.fillRect(x - 5, y + 10, 6, 16);
-            ctx.fillRect(x - 5, y + height - 26, 6, 16);
-            ctx.fillRect(x + width - 1, y + 10, 6, 16);
-            ctx.fillRect(x + width - 1, y + height - 26, 6, 16);
-
-            ctx.fillStyle = mainColor;
+        function fnDrawIceMan(x, y, width, height) {
+            ctx.fillStyle = "#00e5ff";
             ctx.beginPath();
-            ctx.roundRect(x, y, width, height, 8);
+            ctx.roundRect(x, y, width, height, 10);
             ctx.fill();
 
-            ctx.fillStyle = "#222";
-            ctx.fillRect(x + 6, y + 22, width - 12, 28);
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(x + 6, y + 10, width - 12, 12);
+            ctx.fillStyle = "#002b36";
+            ctx.fillRect(x + 10, y + 13, 5, 6);
+            ctx.fillRect(x + width - 15, y + 13, 5, 6);
+        };
 
-            ctx.fillStyle = isPlayer ? "#ffffff" : "#ffcc66";
-            if (isPlayer) {
-                ctx.fillRect(x + 8, y + 25, width - 16, 12);
+        function drawObstacle(obs) {
+            if (obs.type === 'fire') {
+                ctx.fillStyle = "#ff3300";
+                ctx.beginPath();
+                ctx.arc(obs.x + obs.width / 2, obs.y + obs.height / 2, obs.width / 2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = "#ffcc00";
+                ctx.beginPath();
+                ctx.arc(obs.x + obs.width / 2, obs.y + obs.height / 2, obs.width / 4, 0, Math.PI * 2);
+                ctx.fill();
             } else {
-                ctx.fillRect(x + 8, y + 38, width - 16, 12);
-            }
-
-            ctx.fillStyle = isPlayer ? "#ffff00" : "#ffffff";
-            if (isPlayer) {
-                ctx.fillRect(x + 4, y + 2, 8, 4);
-                ctx.fillRect(x + width - 12, y + 2, 8, 4);
-            } else {
-                ctx.fillRect(x + 4, y + height - 6, 8, 4);
-                ctx.fillRect(x + width - 12, y + height - 6, 8, 4);
+                ctx.fillStyle = "#95a5a6";
+                ctx.beginPath();
+                ctx.moveTo(obs.x + obs.width / 2, obs.y);
+                ctx.lineTo(obs.x + obs.width, obs.y + obs.height);
+                ctx.lineTo(obs.x, obs.y + obs.height);
+                ctx.closePath();
+                ctx.fill();
             }
         }
 
         function draw() {
-            ctx.fillStyle = "#1a1a1a";
+            ctx.fillStyle = "#111827";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            ctx.strokeStyle = "#ffffff";
-            ctx.lineWidth = 4;
-            ctx.setLineDash([20, 20]);
-            ctx.beginPath();
-            ctx.moveTo(canvas.width / 2, 0);
-            ctx.lineTo(canvas.width / 2, canvas.height);
-            ctx.stroke();
-            ctx.setLineDash([]);
+            ctx.fillStyle = "#00e5ff";
+            ctx.fillRect(0, 485, canvas.width, 10);
 
-            drawCar(player.x, player.y, player.width, player.height, player.color, true);
+            fnDrawIceMan(player.x, player.y, player.width, player.height);
 
-            for (let enemy of enemies) {
-                drawCar(enemy.x, enemy.y, enemy.width, enemy.height, enemy.color, false);
+            for (let obs of obstacles) {
+                drawObstacle(obs);
             }
 
-            ctx.fillStyle = "#f1c40f";
+            ctx.fillStyle = "#ffffff";
             ctx.font = "bold 20px Tahoma";
             ctx.textAlign = "center";
             ctx.fillText(`النقاط: ${score}`, canvas.width / 2, 35);
