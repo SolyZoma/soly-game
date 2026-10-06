@@ -36,7 +36,7 @@
             max-height: 750px;
         }
 
-        /* شاشة العرض */
+        /* شاشة العرض - اتجاه اليمين بالكامل */
         .display {
             text-align: right;
             padding: 10px 10px 20px 10px;
@@ -45,8 +45,7 @@
             flex-direction: column;
             justify-content: flex-end;
             min-height: 120px;
-            word-break: break-all;
-            word-wrap: break-word;
+            direction: rtl;
         }
 
         .expression {
@@ -55,6 +54,8 @@
             margin-bottom: 5px;
             min-height: 30px;
             font-weight: 400;
+            direction: ltr; /* لجعل الأرقام والعمليات متناسقة في الاتجاه العربي/الرياضي الصحيح */
+            text-align: right;
         }
 
         .result {
@@ -62,13 +63,16 @@
             color: #ffffff;
             font-weight: 300;
             line-height: 1;
+            direction: ltr; /* لضمان ظهور النتيجة والأرقام بشكل صحيح */
+            text-align: right;
         }
 
-        /* لوحة الأزرار */
+        /* لوحة الأزرار - العمود الأيمن للعمليات والعمود الأيسر للأرقام حسب طلبك */
         .buttons {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
             gap: 12px;
+            direction: ltr; /* لترتيب الكيبورد تماماً مثل الصورة المرفقة */
         }
 
         button {
@@ -105,17 +109,12 @@
             font-size: 2rem;
         }
 
-        .btn-orange.active {
-            background-color: #ffffff;
-            color: #ff9f0a;
-        }
-
         .btn-zero {
             grid-column: span 2;
             aspect-ratio: auto;
             border-radius: 40px;
             justify-content: flex-start;
-            padding-right: 35px;
+            padding-left: 35px;
         }
     </style>
 </head>
@@ -127,26 +126,31 @@
             <div class="result" id="result">0</div>
         </div>
         <div class="buttons">
+            <!-- الصف الأول -->
             <button class="btn-dark-gray" onclick="clearAll()">AC</button>
             <button class="btn-dark-gray" onclick="toggleSign()">+/–</button>
             <button class="btn-dark-gray" onclick="appendValue('%')">%</button>
             <button class="btn-orange" onclick="setOperator('/')">÷</button>
 
+            <!-- الصف الثاني -->
             <button class="btn-dark-gray" onclick="appendNumber('7')">7</button>
             <button class="btn-dark-gray" onclick="appendNumber('8')">8</button>
             <button class="btn-dark-gray" onclick="appendNumber('9')">9</button>
             <button class="btn-orange" onclick="setOperator('*')">×</button>
 
+            <!-- الصف الثالث -->
             <button class="btn-dark-gray" onclick="appendNumber('4')">4</button>
             <button class="btn-dark-gray" onclick="appendNumber('5')">5</button>
             <button class="btn-dark-gray" onclick="appendNumber('6')">6</button>
             <button class="btn-orange" onclick="setOperator('-')">−</button>
 
+            <!-- الصف الرابع -->
             <button class="btn-dark-gray" onclick="appendNumber('1')">1</button>
             <button class="btn-dark-gray" onclick="appendNumber('2')">2</button>
             <button class="btn-dark-gray" onclick="appendNumber('3')">3</button>
             <button class="btn-orange" onclick="setOperator('+')">+</button>
 
+            <!-- الصف الخامس -->
             <button class="btn-dark-gray btn-zero" onclick="appendNumber('0')">0</button>
             <button class="btn-dark-gray" onclick="appendDecimal()">.</button>
             <button class="btn-orange" onclick="calculate()">=</button>
