@@ -36,7 +36,7 @@
             max-height: 750px;
         }
 
-        /* شاشة العرض - اتجاه اليمين بالكامل */
+        /* شاشة العرض */
         .display {
             text-align: right;
             padding: 10px 10px 20px 10px;
@@ -54,7 +54,7 @@
             margin-bottom: 5px;
             min-height: 30px;
             font-weight: 400;
-            direction: ltr; /* لجعل الأرقام والعمليات متناسقة في الاتجاه العربي/الرياضي الصحيح */
+            direction: ltr;
             text-align: right;
         }
 
@@ -63,16 +63,16 @@
             color: #ffffff;
             font-weight: 300;
             line-height: 1;
-            direction: ltr; /* لضمان ظهور النتيجة والأرقام بشكل صحيح */
+            direction: ltr;
             text-align: right;
         }
 
-        /* لوحة الأزرار - العمود الأيمن للعمليات والعمود الأيسر للأرقام حسب طلبك */
+        /* لوحة الأزرار */
         .buttons {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
             gap: 12px;
-            direction: ltr; /* لترتيب الكيبورد تماماً مثل الصورة المرفقة */
+            direction: ltr;
         }
 
         button {
@@ -92,12 +92,7 @@
             filter: brightness(130%);
         }
 
-        /* ألوان الأزرار حسب تصميم آبل */
-        .btn-light-gray {
-            background-color: #a5a5a7;
-            color: #000000;
-        }
-
+        /* ألوان الأزرار */
         .btn-dark-gray {
             background-color: #333333;
             color: #ffffff;
@@ -107,14 +102,6 @@
             background-color: #ff9f0a;
             color: #ffffff;
             font-size: 2rem;
-        }
-
-        .btn-zero {
-            grid-column: span 2;
-            aspect-ratio: auto;
-            border-radius: 40px;
-            justify-content: flex-start;
-            padding-left: 35px;
         }
     </style>
 </head>
@@ -126,32 +113,33 @@
             <div class="result" id="result">0</div>
         </div>
         <div class="buttons">
-            <!-- الصف الأول -->
+            <!-- الصف الأول: [x] | AC | % | ÷ -->
+            <button class="btn-dark-gray" onclick="deleteLast()" style="font-size: 1.4rem;">⌫</button>
             <button class="btn-dark-gray" onclick="clearAll()">AC</button>
-            <button class="btn-dark-gray" onclick="toggleSign()">+/–</button>
             <button class="btn-dark-gray" onclick="appendValue('%')">%</button>
             <button class="btn-orange" onclick="setOperator('/')">÷</button>
 
-            <!-- الصف الثاني -->
+            <!-- الصف الثاني: 7 | 8 | 9 | × -->
             <button class="btn-dark-gray" onclick="appendNumber('7')">7</button>
             <button class="btn-dark-gray" onclick="appendNumber('8')">8</button>
             <button class="btn-dark-gray" onclick="appendNumber('9')">9</button>
             <button class="btn-orange" onclick="setOperator('*')">×</button>
 
-            <!-- الصف الثالث -->
+            <!-- الصف الثالث: 4 | 5 | 6 | - -->
             <button class="btn-dark-gray" onclick="appendNumber('4')">4</button>
             <button class="btn-dark-gray" onclick="appendNumber('5')">5</button>
             <button class="btn-dark-gray" onclick="appendNumber('6')">6</button>
             <button class="btn-orange" onclick="setOperator('-')">−</button>
 
-            <!-- الصف الرابع -->
+            <!-- الصف الرابع: 1 | 2 | 3 | + -->
             <button class="btn-dark-gray" onclick="appendNumber('1')">1</button>
             <button class="btn-dark-gray" onclick="appendNumber('2')">2</button>
             <button class="btn-dark-gray" onclick="appendNumber('3')">3</button>
             <button class="btn-orange" onclick="setOperator('+')">+</button>
 
-            <!-- الصف الخامس -->
-            <button class="btn-dark-gray btn-zero" onclick="appendNumber('0')">0</button>
+            <!-- الصف الخامس: +/- | 0 | . | = -->
+            <button class="btn-dark-gray" onclick="toggleSign()" style="font-size: 1.3rem;">+/–</button>
+            <button class="btn-dark-gray" onclick="appendNumber('0')">0</button>
             <button class="btn-dark-gray" onclick="appendDecimal()">.</button>
             <button class="btn-orange" onclick="calculate()">=</button>
         </div>
@@ -255,6 +243,15 @@
             previousInput = '';
             operator = null;
             resetScreen = false;
+            updateDisplay();
+        }
+
+        function deleteLast() {
+            if (currentInput.length === 1 || currentInput === 'Error') {
+                currentInput = '0';
+            } else {
+                currentInput = currentInput.slice(0, -1);
+            }
             updateDisplay();
         }
 
